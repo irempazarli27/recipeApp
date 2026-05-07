@@ -7,10 +7,9 @@
   NODE_VERSION = "20"
 
 # /api/* isteklerini Render backend'ine ilet
-# RENDER_URL'yi Netlify ortam değişkenlerine ekle (örn: https://recipe-app-api.onrender.com)
 [[redirects]]
   from   = "/api/*"
-  to     = ":RENDER_URL/api/:splat"
+  to     = "https://recipeapp-jg8d.onrender.com/api/:splat"
   status = 200
   force  = true
 
