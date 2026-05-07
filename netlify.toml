@@ -1,0 +1,21 @@
+[build]
+  base    = "."
+  command = "npm run build"
+  publish = "frontend/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# /api/* isteklerini Render backend'ine ilet
+# RENDER_URL'yi Netlify ortam değişkenlerine ekle (örn: https://recipe-app-api.onrender.com)
+[[redirects]]
+  from   = "/api/*"
+  to     = ":RENDER_URL/api/:splat"
+  status = 200
+  force  = true
+
+# SPA: tüm diğer istekleri index.html'e yönlendir
+[[redirects]]
+  from   = "/*"
+  to     = "/index.html"
+  status = 200

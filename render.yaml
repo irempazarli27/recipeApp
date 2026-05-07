@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: recipe-app-api
+    env: node
+    region: frankfurt   # Türkiye'ye en yakın ücretsiz bölge
+    plan: free
+    buildCommand: npm install
+    startCommand: node backend/index.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      # Aşağıdakileri Render Dashboard > Environment'a manuel gir:
+      - key: DATABASE_URL
+        sync: false       # Render PostgreSQL'den otomatik bağlanır
+      - key: JWT_SECRET
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: FRONTEND_URL
+        sync: false       # Netlify URL'ini gir (örn: https://recipe-app.netlify.app)
+
+databases:
+  - name: recipe-app-db
+    plan: free
+    region: frankfurt
