@@ -1,9 +1,0 @@
-Aşağıdaki dosyalar silindi:
-- HomePage.jsx
-- FavoritesPage.jsx
-- App.jsx
-- AccountPage.jsx
-- AdminPage.jsx
-- HistoryPage.jsx
-- SearchPage.jsx
-- ShoppingListsPage.jsx
