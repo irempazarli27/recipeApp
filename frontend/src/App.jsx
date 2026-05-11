@@ -43,9 +43,9 @@ function SidebarContent({ open, onToggle, onNavClick }) {
     <>
       {/* Logo + Toggle */}
       <div className="sidebar-logo">
-        {open && <div className="sidebar-logo-icon">🍽</div>}
+        <div className="sidebar-logo-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>🍽</div>
         {open && (
-          <div className="sidebar-logo-text">
+          <div className="sidebar-logo-text" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <span className="sidebar-logo-name">Tarif<span>App</span></span>
             <small>Tarif Asistanı</small>
           </div>
