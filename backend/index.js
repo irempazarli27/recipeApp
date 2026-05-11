@@ -31,14 +31,6 @@ pool.query(`
   `)
 ).catch(err => console.error('Migration warning:', err.message));
 
-const app = express();
-app.use(cors({
-  origin: process.env.FRONTEND_URL || true,
-  credentials: true
-}));
-app.use(express.json());
-
-
 // Sağlık kontrolü
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
