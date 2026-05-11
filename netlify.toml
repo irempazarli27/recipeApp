@@ -6,6 +6,11 @@
 [build.environment]
   NODE_VERSION = "20"
 
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Cross-Origin-Opener-Policy = "same-origin-allow-popups"
+
 # /api/* isteklerini Render backend'ine ilet
 [[redirects]]
   from   = "/api/*"
