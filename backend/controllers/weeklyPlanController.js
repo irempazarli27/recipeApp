@@ -10,6 +10,7 @@ export async function getWeeklyPlan(req, res) {
        LEFT JOIN recipes r ON r.id = wp.recipe_id
        LEFT JOIN categories c ON c.id = r.category_id
        WHERE wp.user_id = $1
+         AND wp.week_start = date_trunc('week', CURRENT_DATE)::date
        ORDER BY wp.day_of_week`,
       [req.userId]
     );
@@ -30,9 +31,9 @@ export async function setDay(req, res) {
   if (!Number.isInteger(recipeId) || recipeId <= 0) return res.status(400).json({ message: 'Geçersiz tarif.' });
   try {
     await pool.query(
-      `INSERT INTO weekly_plan (user_id, day_of_week, recipe_id)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (user_id, day_of_week) DO UPDATE SET recipe_id = $3`,
+      `INSERT INTO weekly_plan (user_id, day_of_week, recipe_id, week_start)
+       VALUES ($1, $2, $3, date_trunc('week', CURRENT_DATE)::date)
+       ON CONFLICT (user_id, day_of_week, week_start) DO UPDATE SET recipe_id = $3`,
       [req.userId, day, recipeId]
     );
     res.json({ ok: true });
@@ -46,7 +47,8 @@ export async function clearDay(req, res) {
   if (!Number.isInteger(day) || day < 0 || day > 6) return res.status(400).json({ message: 'Geçersiz gün.' });
   try {
     await pool.query(
-      `DELETE FROM weekly_plan WHERE user_id = $1 AND day_of_week = $2`,
+      `DELETE FROM weekly_plan WHERE user_id = $1 AND day_of_week = $2
+         AND week_start = date_trunc('week', CURRENT_DATE)::date`,
       [req.userId, day]
     );
     res.json({ ok: true });
