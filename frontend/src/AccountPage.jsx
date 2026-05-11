@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { loginUser, registerUser, getCurrentUser } from './api.js';
+import { loginUser, registerUser, getCurrentUser, loginWithGoogle } from './api.js';
 import ds from './design.js';
 
 const QUICK_LINKS = [
@@ -104,6 +104,7 @@ function ProfileView({ user, onLogout }) {
 
 // ── Auth forms ────────────────────────────────────────────────────────────────
 export default function AccountPage() {
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
   const [tab, setTab]               = useState('login');
   const [user, setUser]             = useState(null);
   const [loading, setLoading]       = useState(true);
@@ -116,6 +117,27 @@ export default function AccountPage() {
   const [regEmail, setRegEmail]           = useState('');
   const [regPassword, setRegPassword]     = useState('');
 
+  const loginGoogleRef = useRef(null);
+  const registerGoogleRef = useRef(null);
+
+  const handleGoogleCredential = useCallback((credentialResponse) => {
+    const idToken = credentialResponse?.credential;
+    if (!idToken) {
+      setError('Google kimlik bilgisi alınamadı.');
+      return;
+    }
+    setError(null);
+    setSuccess(null);
+    loginWithGoogle(idToken)
+      .then(data => {
+        localStorage.setItem('token', data.token);
+        localStorage.setItem('role', data.user?.role || '');
+        setUser(data.user);
+        setSuccess('Google ile giriş başarılı!');
+      })
+      .catch(err => setError(err.message));
+  }, []);
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (!token) { setLoading(false); return; }
@@ -124,6 +146,61 @@ export default function AccountPage() {
       .catch(() => localStorage.removeItem('token'))
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    if (user || !googleClientId) return;
+
+    let canceled = false;
+
+    function renderGoogleButtons() {
+      if (canceled || !window.google?.accounts?.id) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCredential
+      });
+
+      if (loginGoogleRef.current) {
+        loginGoogleRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(loginGoogleRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          width: 280,
+          text: 'signin_with',
+          locale: 'tr'
+        });
+      }
+
+      if (registerGoogleRef.current) {
+        registerGoogleRef.current.innerHTML = '';
+        window.google.accounts.id.renderButton(registerGoogleRef.current, {
+          theme: 'outline',
+          size: 'large',
+          shape: 'pill',
+          width: 280,
+          text: 'signup_with',
+          locale: 'tr'
+        });
+      }
+    }
+
+    if (window.google?.accounts?.id) {
+      renderGoogleButtons();
+      return () => { canceled = true; };
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = renderGoogleButtons;
+    document.head.appendChild(script);
+
+    return () => {
+      canceled = true;
+    };
+  }, [user, googleClientId, handleGoogleCredential, tab]);
 
   function handleLogin(e) {
     e.preventDefault();
@@ -190,6 +267,17 @@ export default function AccountPage() {
               <input className="form-input" type="email"    placeholder="E-posta"  value={loginEmail}    onChange={e => setLoginEmail(e.target.value)}    required />
               <input className="form-input" type="password" placeholder="Şifre"    value={loginPassword} onChange={e => setLoginPassword(e.target.value)} required />
               <button className="btn btn-full" type="submit" style={{ marginTop: 4 }}>Giriş Yap</button>
+
+              {googleClientId ? (
+                <>
+                  <div className="acc-auth__divider"><span>veya</span></div>
+                  <div ref={loginGoogleRef} style={{ display: 'flex', justifyContent: 'center' }} />
+                </>
+              ) : (
+                <small style={{ color: '#64748b', textAlign: 'center' }}>
+                  Google girişi için VITE_GOOGLE_CLIENT_ID ayarı gerekli.
+                </small>
+              )}
             </form>
           ) : (
             <form onSubmit={handleRegister} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -197,6 +285,17 @@ export default function AccountPage() {
               <input className="form-input" type="email"    placeholder="E-posta"    value={regEmail}    onChange={e => setRegEmail(e.target.value)}    required />
               <input className="form-input" type="password" placeholder="Şifre (min. 6 karakter)" value={regPassword} onChange={e => setRegPassword(e.target.value)} required />
               <button className="btn btn-full" type="submit" style={{ marginTop: 4 }}>Kayıt Ol</button>
+
+              {googleClientId ? (
+                <>
+                  <div className="acc-auth__divider"><span>veya</span></div>
+                  <div ref={registerGoogleRef} style={{ display: 'flex', justifyContent: 'center' }} />
+                </>
+              ) : (
+                <small style={{ color: '#64748b', textAlign: 'center' }}>
+                  Google kaydı için VITE_GOOGLE_CLIENT_ID ayarı gerekli.
+                </small>
+              )}
             </form>
           )}
         </div>

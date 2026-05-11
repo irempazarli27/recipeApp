@@ -2755,6 +2755,31 @@ body {
   margin-bottom: 18px;
 }
 
+.acc-auth__divider {
+  position: relative;
+  text-align: center;
+  margin-top: 8px;
+  margin-bottom: 2px;
+}
+
+.acc-auth__divider::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  border-top: 1px solid var(--color-border-subtle);
+}
+
+.acc-auth__divider span {
+  position: relative;
+  z-index: 1;
+  padding: 0 10px;
+  background: var(--color-surface);
+  color: var(--color-text-muted);
+  font-size: 0.8rem;
+}
+
 /* Profile page layout */
 .acc-page {
   display: flex;

@@ -7,6 +7,8 @@ const router = express.Router();
 router.post('/register', authController.register);
 // Giriş yap
 router.post('/login', authController.login);
+// Google ile giriş / kayıt
+router.post('/google', authController.loginWithGoogle);
 // Me
 router.get('/me', authController.requireAuth, authController.me);
 

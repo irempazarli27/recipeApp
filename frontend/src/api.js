@@ -36,6 +36,10 @@ export function loginUser({ email, password }) {
 	return apiFetch('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
 }
 
+export function loginWithGoogle(idToken) {
+	return apiFetch('/auth/google', { method: 'POST', body: JSON.stringify({ idToken }) });
+}
+
 export function getCurrentUser() {
 	return apiFetch('/auth/me');
 }

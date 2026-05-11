@@ -1,9 +1,12 @@
 // Auth işlemleri için controller
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { OAuth2Client } from 'google-auth-library';
 import pool from '../config/db.js';
 
 const jwtSecret = process.env.JWT_SECRET || 'recipe-app-dev-secret';
+const googleClientId = process.env.GOOGLE_CLIENT_ID || '';
+const googleClient = googleClientId ? new OAuth2Client(googleClientId) : null;
 
 function toPublicUser(row) {
 	return {
@@ -109,6 +112,72 @@ export async function login(req, res) {
 	} catch (error) {
 		console.error('login error:', error);
 		return res.status(500).json({ message: 'Giris yaparken hata olustu.' });
+	}
+}
+
+export async function loginWithGoogle(req, res) {
+	const idToken = String(req.body?.idToken || '').trim();
+
+	if (!idToken) {
+		return res.status(400).json({ message: 'idToken zorunlu.' });
+	}
+
+	if (!googleClient) {
+		return res.status(500).json({
+			message: 'Google girisi icin sunucuda GOOGLE_CLIENT_ID ayari eksik.'
+		});
+	}
+
+	try {
+		const ticket = await googleClient.verifyIdToken({
+			idToken,
+			audience: googleClientId
+		});
+		const payload = ticket.getPayload();
+
+		if (!payload?.email || payload.email_verified !== true) {
+			return res.status(401).json({
+				message: 'Google hesabi dogrulanamadi.'
+			});
+		}
+
+		const email = String(payload.email).toLowerCase();
+		const fullName = String(payload.name || email.split('@')[0]).trim();
+
+		const found = await pool.query(
+			`
+			SELECT id, full_name, email, role
+			FROM users
+			WHERE email = $1
+			LIMIT 1
+			`,
+			[email]
+		);
+
+		let userRow = found.rows[0] || null;
+
+		if (!userRow) {
+			const randomSecret = `google:${payload.sub || email}:${Date.now()}`;
+			const passwordHash = await bcrypt.hash(randomSecret, 10);
+			const inserted = await pool.query(
+				`
+				INSERT INTO users (full_name, email, password_hash)
+				VALUES ($1, $2, $3)
+				RETURNING id, full_name, email, role
+				`,
+				[fullName, email, passwordHash]
+			);
+			userRow = inserted.rows[0];
+		}
+
+		const user = toPublicUser(userRow);
+		const token = createToken(user);
+		return res.json({ token, user });
+	} catch (error) {
+		console.error('google login error:', error);
+		return res.status(401).json({
+			message: 'Google ile giris basarisiz. Lutfen tekrar deneyin.'
+		});
 	}
 }
 
