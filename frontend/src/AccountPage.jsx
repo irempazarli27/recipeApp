@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { loginUser, registerUser, getCurrentUser, loginWithGoogle } from './api.js';
+import { loginUser, registerUser, getCurrentUser, loginWithGoogle, updateProfile } from './api.js';
 import ds from './design.js';
 
 const QUICK_LINKS = [
@@ -32,9 +32,31 @@ function Avatar({ name, size = 52 }) {
 }
 
 // ── Profile view ──────────────────────────────────────────────────────────────
-function ProfileView({ user, onLogout }) {
+function ProfileView({ user, onLogout, onUpdate }) {
   const isAdmin   = user.role === 'admin';
   const joinedAt  = user.createdAt || user.created_at;
+  const [editMode, setEditMode] = useState(false);
+  const [editName, setEditName] = useState(user.fullName);
+  const [editPassword, setEditPassword] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [editErr, setEditErr] = useState(null);
+  const [editOk, setEditOk] = useState(null);
+
+  async function handleSave(e) {
+    e.preventDefault();
+    setSaving(true); setEditErr(null); setEditOk(null);
+    try {
+      const data = await updateProfile({ fullName: editName, password: editPassword || undefined });
+      onUpdate(data.user);
+      setEditOk('Bilgiler güncellendi.');
+      setEditMode(false);
+      setEditPassword('');
+    } catch (err) {
+      setEditErr(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <div className="acc-page">
@@ -65,9 +87,37 @@ function ProfileView({ user, onLogout }) {
                 </span>
               )}
             </div>
+            <button
+              onClick={() => { setEditMode(e => !e); setEditErr(null); setEditOk(null); setEditName(user.fullName); setEditPassword(''); }}
+              style={{ marginTop: 10, fontSize: '0.78rem', padding: '4px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', color: '#475569' }}
+            >
+              {editMode ? 'İptal' : '✏️ Düzenle'}
+            </button>
           </div>
         </div>
       </div>
+
+      {/* ── Edit form ────────────────────────── */}
+      {editMode && (
+        <div className="acc-section">
+          <div className="acc-section__title">Bilgileri Düzenle</div>
+          {editErr && <div style={{ color: '#dc2626', fontSize: '0.82rem', marginBottom: 8 }}>{editErr}</div>}
+          {editOk  && <div style={{ color: '#16a34a', fontSize: '0.82rem', marginBottom: 8 }}>{editOk}</div>}
+          <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <div>
+              <label style={{ fontSize: '0.78rem', color: '#475569', display: 'block', marginBottom: 4 }}>Ad Soyad</label>
+              <input className="form-input" value={editName} onChange={e => setEditName(e.target.value)} required />
+            </div>
+            <div>
+              <label style={{ fontSize: '0.78rem', color: '#475569', display: 'block', marginBottom: 4 }}>Yeni Şifre <span style={{ color: '#94a3b8' }}>(boş bırakırsan değişmez)</span></label>
+              <input className="form-input" type="password" value={editPassword} onChange={e => setEditPassword(e.target.value)} placeholder="En az 6 karakter" />
+            </div>
+            <button className="btn btn-primary" type="submit" disabled={saving} style={{ alignSelf: 'flex-start' }}>
+              {saving ? 'Kaydediliyor...' : 'Kaydet'}
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* ── Quick links ──────────────────────── */}
       <div className="acc-section">
@@ -237,7 +287,7 @@ export default function AccountPage() {
 
   if (loading) return <div className="loading">Yükleniyor…</div>;
 
-  if (user) return <ProfileView user={user} onLogout={handleLogout} />;
+  if (user) return <ProfileView user={user} onLogout={handleLogout} onUpdate={setUser} />;
 
   return (
     <div className="acc-auth">

@@ -11,5 +11,6 @@ router.post('/login', authController.login);
 router.post('/google', authController.loginWithGoogle);
 // Me
 router.get('/me', authController.requireAuth, authController.me);
+router.put('/me', authController.requireAuth, authController.updateMe);
 
 export default router;

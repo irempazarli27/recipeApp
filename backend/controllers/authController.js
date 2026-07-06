@@ -195,6 +195,25 @@ export function requireAuth(req, res, next) {
 	}
 }
 
+export async function updateMe(req, res) {
+	const fullName = String(req.body?.fullName || '').trim();
+	const password = req.body?.password ? String(req.body.password) : null;
+	if (!fullName) return res.status(400).json({ message: 'Ad Soyad zorunlu.' });
+	if (password && password.length < 6) return res.status(400).json({ message: 'Şifre en az 6 karakter olmalı.' });
+	try {
+		if (password) {
+			const hash = await bcrypt.hash(password, 10);
+			await pool.query('UPDATE users SET full_name = $1, password_hash = $2 WHERE id = $3', [fullName, hash, req.userId]);
+		} else {
+			await pool.query('UPDATE users SET full_name = $1 WHERE id = $2', [fullName, req.userId]);
+		}
+		const result = await pool.query('SELECT id, full_name, email, role FROM users WHERE id = $1', [req.userId]);
+		return res.json({ user: toPublicUser(result.rows[0]) });
+	} catch (error) {
+		return res.status(500).json({ message: 'Bilgiler güncellenemedi.' });
+	}
+}
+
 export async function me(req, res) {
 	try {
 		const result = await pool.query(

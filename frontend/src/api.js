@@ -44,6 +44,10 @@ export function getCurrentUser() {
 	return apiFetch('/auth/me');
 }
 
+export function updateProfile({ fullName, password }) {
+	return apiFetch('/auth/me', { method: 'PUT', body: JSON.stringify({ fullName, password }) });
+}
+
 // Recipes
 export function getRecipes() {
 	return apiFetch('/recipes');

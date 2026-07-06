@@ -42,8 +42,8 @@ function SidebarContent({ open, onToggle, onNavClick }) {
   return (
     <>
       {/* Logo + Toggle */}
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>🍽</div>
+      <div className="sidebar-logo" style={!open ? { justifyContent: 'center', padding: '14px 0 14px' } : {}}>
+        {open && <div className="sidebar-logo-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>🍽</div>}
         {open && (
           <div className="sidebar-logo-text" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <span className="sidebar-logo-name">Tarif<span>App</span></span>
