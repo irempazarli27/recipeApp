@@ -26,26 +26,33 @@ async function runMigrations() {
 
     CREATE TABLE IF NOT EXISTS categories (
       id SERIAL PRIMARY KEY,
-      name VARCHAR(255) UNIQUE NOT NULL
+      name VARCHAR(80) UNIQUE NOT NULL,
+      slug VARCHAR(80) UNIQUE
     );
 
     CREATE TABLE IF NOT EXISTS recipes (
       id SERIAL PRIMARY KEY,
-      title VARCHAR(255) NOT NULL,
-      description TEXT,
-      difficulty VARCHAR(50),
-      time_minutes INTEGER,
+      title VARCHAR(180) NOT NULL,
+      description TEXT NOT NULL DEFAULT '',
+      difficulty VARCHAR(16) DEFAULT 'orta',
+      prep_time_minutes INTEGER DEFAULT 0,
+      cook_time_minutes INTEGER DEFAULT 0,
+      base_servings INTEGER DEFAULT 4,
       category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
       created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      created_at TIMESTAMPTZ DEFAULT NOW()
+      tags TEXT[] DEFAULT '{}',
+      image_url TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
     );
 
     CREATE TABLE IF NOT EXISTS ingredients (
       id SERIAL PRIMARY KEY,
       recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
-      name VARCHAR(255) NOT NULL,
+      name VARCHAR(120) NOT NULL,
       amount NUMERIC,
-      unit VARCHAR(100)
+      unit VARCHAR(40),
+      notes TEXT
     );
 
     CREATE TABLE IF NOT EXISTS recipe_steps (
@@ -113,9 +120,11 @@ async function runMigrations() {
 
   // Varsayılan kategorileri ekle (yoksa)
   await pool.query(`
-    INSERT INTO categories (name) VALUES
-      ('Çorba'), ('Ana Yemek'), ('Salata'), ('Tatlı'),
-      ('Kahvaltılık'), ('Atıştırmalık'), ('İçecek'), ('Sebze Yemeği')
+    INSERT INTO categories (name, slug) VALUES
+      ('Çorba', 'corba'), ('Ana Yemek', 'ana-yemek'), ('Salata', 'salata'),
+      ('Tatlı', 'tatli'), ('Kahvaltılık', 'kahvaltilik'),
+      ('Atıştırmalık', 'atistirmalik'), ('İçecek', 'icecek'),
+      ('Sebze Yemeği', 'sebze-yemegi')
     ON CONFLICT (name) DO NOTHING;
   `);
 
