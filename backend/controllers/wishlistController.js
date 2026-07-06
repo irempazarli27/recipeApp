@@ -3,12 +3,12 @@ import pool from '../config/db.js';
 export async function getWishlist(req, res) {
 	try {
 		const result = await pool.query(
-			`SELECT r.id, r.title, r.description, r.difficulty, c.name AS category, rw.added_at AS "addedAt"
+			`SELECT r.id, r.title, r.description, r.difficulty, c.name AS category, rw.created_at AS "addedAt"
 			 FROM recipe_wishlist rw
 			 JOIN recipes r ON r.id = rw.recipe_id
 			 JOIN categories c ON c.id = r.category_id
 			 WHERE rw.user_id = $1
-			 ORDER BY rw.added_at DESC`,
+			 ORDER BY rw.created_at DESC`,
 			[req.userId]
 		);
 		res.json({ wishlist: result.rows });

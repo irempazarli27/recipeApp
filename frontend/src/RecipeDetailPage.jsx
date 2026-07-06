@@ -71,6 +71,7 @@ export default function RecipeDetailPage() {
             title: r.title,
             description: r.description || '',
             difficulty: r.difficulty,
+            tags: (r.tags || []).join(', '),
             steps: (r.steps || []).map(s => s.instruction)
           });
           setEditMode(true);
