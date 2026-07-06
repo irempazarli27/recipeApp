@@ -13,7 +13,8 @@ function toPublicUser(row) {
 		id: row.id,
 		fullName: row.full_name,
 		email: row.email,
-		role: row.role
+		role: row.role,
+		createdAt: row.created_at || null,
 	};
 }
 
@@ -60,7 +61,7 @@ export async function register(req, res) {
 			`
 			INSERT INTO users (full_name, email, password_hash)
 			VALUES ($1, $2, $3)
-			RETURNING id, full_name, email, role
+			RETURNING id, full_name, email, role, created_at
 			`,
 			[fullName, email, passwordHash]
 		);
@@ -88,7 +89,7 @@ export async function login(req, res) {
 	try {
 		const result = await pool.query(
 			`
-			SELECT id, full_name, email, password_hash, role
+			SELECT id, full_name, email, password_hash, role, created_at
 			FROM users
 			WHERE email = $1
 			LIMIT 1
@@ -146,7 +147,7 @@ export async function loginWithGoogle(req, res) {
 
 		const found = await pool.query(
 			`
-			SELECT id, full_name, email, role
+			SELECT id, full_name, email, role, created_at
 			FROM users
 			WHERE email = $1
 			LIMIT 1
@@ -163,7 +164,7 @@ export async function loginWithGoogle(req, res) {
 				`
 				INSERT INTO users (full_name, email, password_hash)
 				VALUES ($1, $2, $3)
-				RETURNING id, full_name, email, role
+				RETURNING id, full_name, email, role, created_at
 				`,
 				[fullName, email, passwordHash]
 			);
@@ -207,7 +208,7 @@ export async function updateMe(req, res) {
 		} else {
 			await pool.query('UPDATE users SET full_name = $1 WHERE id = $2', [fullName, req.userId]);
 		}
-		const result = await pool.query('SELECT id, full_name, email, role FROM users WHERE id = $1', [req.userId]);
+		const result = await pool.query('SELECT id, full_name, email, role, created_at FROM users WHERE id = $1', [req.userId]);
 		return res.json({ user: toPublicUser(result.rows[0]) });
 	} catch (error) {
 		return res.status(500).json({ message: 'Bilgiler güncellenemedi.' });
@@ -218,7 +219,7 @@ export async function me(req, res) {
 	try {
 		const result = await pool.query(
 			`
-			SELECT id, full_name, email, role
+			SELECT id, full_name, email, role, created_at
 			FROM users
 			WHERE id = $1
 			LIMIT 1

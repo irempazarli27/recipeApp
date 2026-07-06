@@ -98,11 +98,15 @@ function ProfileView({ user, onLogout, onUpdate }) {
       </div>
 
       {/* ── Edit form ────────────────────────── */}
+      {editOk && !editMode && (
+        <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', color: '#16a34a', fontSize: '0.83rem', fontWeight: 500 }}>
+          ✓ {editOk}
+        </div>
+      )}
       {editMode && (
         <div className="acc-section">
           <div className="acc-section__title">Bilgileri Düzenle</div>
           {editErr && <div style={{ color: '#dc2626', fontSize: '0.82rem', marginBottom: 8 }}>{editErr}</div>}
-          {editOk  && <div style={{ color: '#16a34a', fontSize: '0.82rem', marginBottom: 8 }}>{editOk}</div>}
           <form onSubmit={handleSave} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
               <label style={{ fontSize: '0.78rem', color: '#475569', display: 'block', marginBottom: 4 }}>Ad Soyad</label>
