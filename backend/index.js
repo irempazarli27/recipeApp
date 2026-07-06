@@ -12,24 +12,110 @@ app.use(cors({
 }));
 app.use(express.json());
 
-// DB migrasyonu: weekly_plan tablosuna week_start ekle
-pool.query(`
-  ALTER TABLE weekly_plan ADD COLUMN IF NOT EXISTS week_start DATE NOT NULL DEFAULT date_trunc('week', CURRENT_DATE)::date;
-`).then(() =>
-  pool.query(`
-    DO $$
-    BEGIN
-      IF EXISTS (
-        SELECT 1 FROM pg_constraint WHERE conname = 'weekly_plan_pkey'
-        AND contype = 'p'
-        AND array_length(conkey, 1) = 2
-      ) THEN
-        ALTER TABLE weekly_plan DROP CONSTRAINT weekly_plan_pkey;
-        ALTER TABLE weekly_plan ADD PRIMARY KEY (user_id, day_of_week, week_start);
-      END IF;
-    END$$;
-  `)
-).catch(err => console.error('Migration warning:', err.message));
+// Tüm tabloları oluştur (yoksa)
+async function runMigrations() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id SERIAL PRIMARY KEY,
+      full_name VARCHAR(255) NOT NULL,
+      email VARCHAR(255) UNIQUE NOT NULL,
+      password_hash VARCHAR(255),
+      role VARCHAR(50) NOT NULL DEFAULT 'user',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS categories (
+      id SERIAL PRIMARY KEY,
+      name VARCHAR(255) UNIQUE NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS recipes (
+      id SERIAL PRIMARY KEY,
+      title VARCHAR(255) NOT NULL,
+      description TEXT,
+      difficulty VARCHAR(50),
+      time_minutes INTEGER,
+      category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL,
+      created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS ingredients (
+      id SERIAL PRIMARY KEY,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      amount NUMERIC,
+      unit VARCHAR(100)
+    );
+
+    CREATE TABLE IF NOT EXISTS recipe_steps (
+      id SERIAL PRIMARY KEY,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      step_number INTEGER NOT NULL,
+      instruction TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS favorites (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, recipe_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS recipe_wishlist (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      PRIMARY KEY(user_id, recipe_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS shopping_lists (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      title VARCHAR(255) NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    );
+
+    CREATE TABLE IF NOT EXISTS shopping_list_items (
+      id SERIAL PRIMARY KEY,
+      list_id INTEGER NOT NULL REFERENCES shopping_lists(id) ON DELETE CASCADE,
+      name VARCHAR(255) NOT NULL,
+      amount NUMERIC,
+      unit VARCHAR(100)
+    );
+
+    CREATE TABLE IF NOT EXISTS view_history (
+      id SERIAL PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      last_viewed_at TIMESTAMPTZ DEFAULT NOW(),
+      view_count INTEGER DEFAULT 1,
+      cooked_count INTEGER DEFAULT 0,
+      UNIQUE(user_id, recipe_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS weekly_plan (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      day_of_week INTEGER NOT NULL,
+      recipe_id INTEGER REFERENCES recipes(id) ON DELETE SET NULL,
+      week_start DATE NOT NULL DEFAULT date_trunc('week', CURRENT_DATE)::date,
+      PRIMARY KEY(user_id, day_of_week, week_start)
+    );
+  `);
+
+  // Varsayılan kategorileri ekle (yoksa)
+  await pool.query(`
+    INSERT INTO categories (name) VALUES
+      ('Çorba'), ('Ana Yemek'), ('Salata'), ('Tatlı'),
+      ('Kahvaltılık'), ('Atıştırmalık'), ('İçecek'), ('Sebze Yemeği')
+    ON CONFLICT (name) DO NOTHING;
+  `);
+
+  console.log('[DB] Migrasyon tamamlandı.');
+}
+
+runMigrations().catch(err => console.error('[DB] Migrasyon hatası:', err.message));
 
 // Sağlık kontrolü
 app.get('/api/health', (_req, res) => {
