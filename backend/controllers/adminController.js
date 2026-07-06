@@ -78,7 +78,7 @@ export async function listRecipes(_req, res) {
         r.id, r.title, r.description, r.difficulty,
         COALESCE(SUM(vh.cooked_count), 0)::int AS "cookedTotal",
         ROUND(AVG(rr.rating)::numeric, 1) AS "avgRating",
-        COUNT(DISTINCT rr.id)::int AS "ratingCount",
+        COUNT(DISTINCT rr.user_id)::int AS "ratingCount",
         COUNT(DISTINCT rn.user_id)::int AS "noteCount"
       FROM recipes r
       LEFT JOIN view_history vh ON vh.recipe_id = r.id
