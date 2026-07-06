@@ -3,6 +3,43 @@ import { Link } from 'react-router-dom';
 import { loginUser, registerUser, getCurrentUser, loginWithGoogle, updateProfile } from './api.js';
 import ds from './design.js';
 
+// ── GSI singleton ─────────────────────────────────────────────────────────────
+// initialize() sadece bir kez çağrılır, script sadece bir kez yüklenir
+let _gsiReady = false;
+let _gsiCallbacks = [];
+function onGSIReady(fn) {
+  if (_gsiReady) { fn(); return; }
+  _gsiCallbacks.push(fn);
+}
+function _resolveGSI() {
+  _gsiReady = true;
+  _gsiCallbacks.forEach(fn => fn());
+  _gsiCallbacks = [];
+}
+function loadGSI(clientId, credential_callback) {
+  if (document.querySelector('script[src="https://accounts.google.com/gsi/client"]')) {
+    // Script zaten yüklendi — sadece initialize edilmediyse çalıştır
+    if (window.google?.accounts?.id && !window._gsiInitDone) {
+      window.google.accounts.id.initialize({ client_id: clientId, callback: credential_callback });
+      window._gsiInitDone = true;
+      _resolveGSI();
+    }
+    return;
+  }
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.defer = true;
+  script.onload = () => {
+    if (!window._gsiInitDone) {
+      window.google.accounts.id.initialize({ client_id: clientId, callback: credential_callback });
+      window._gsiInitDone = true;
+    }
+    _resolveGSI();
+  };
+  document.head.appendChild(script);
+}
+
 const QUICK_LINKS = [
   { to: '/favorites',      emoji: '❤️',  label: 'Favoriler',        sub: 'Kaydettiğiniz tarifler' },
   { to: '/wishlist',       emoji: '📋',  label: 'Yapacaklarım',     sub: 'Pişirme planınız' },
@@ -201,10 +238,9 @@ export default function AccountPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // GSI script'i yükle ve initialize — sadece bir kez
+  // GSI yükle + butonları render et
   useEffect(() => {
     if (user || !googleClientId) return;
-
     let canceled = false;
 
     function renderButtons() {
@@ -225,52 +261,11 @@ export default function AccountPage() {
       }
     }
 
-    function initGoogle() {
-      if (canceled || !window.google?.accounts?.id) return;
-      if (!window._gsiInitialized) {
-        window.google.accounts.id.initialize({
-          client_id: googleClientId,
-          callback: handleGoogleCredential
-        });
-        window._gsiInitialized = true;
-      }
-      renderButtons();
-    }
-
-    if (window.google?.accounts?.id) {
-      initGoogle();
-      return () => { canceled = true; };
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = initGoogle;
-    document.head.appendChild(script);
+    loadGSI(googleClientId, handleGoogleCredential);
+    onGSIReady(renderButtons);
 
     return () => { canceled = true; };
-  }, [user, googleClientId, handleGoogleCredential]);
-
-  // Google butonlarını render et — tab değişince veya GSI hazır olunca
-  useEffect(() => {
-    if (user || !googleClientId || !window._gsiInitialized) return;
-
-    if (loginGoogleRef.current) {
-      loginGoogleRef.current.innerHTML = '';
-      window.google.accounts.id.renderButton(loginGoogleRef.current, {
-        theme: 'outline', size: 'large', shape: 'pill', width: 280,
-        text: 'signin_with', locale: 'tr'
-      });
-    }
-    if (registerGoogleRef.current) {
-      registerGoogleRef.current.innerHTML = '';
-      window.google.accounts.id.renderButton(registerGoogleRef.current, {
-        theme: 'outline', size: 'large', shape: 'pill', width: 280,
-        text: 'signup_with', locale: 'tr'
-      });
-    }
-  }, [user, googleClientId, tab]);
+  }, [user, googleClientId, handleGoogleCredential, tab]);
 
   function handleLogin(e) {
     e.preventDefault();
