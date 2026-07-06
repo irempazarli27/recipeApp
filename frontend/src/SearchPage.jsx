@@ -58,8 +58,11 @@ const diffBadge = {
 // ── RecipeCard ────────────────────────────────────────────────────────────────────────────
 function RecipeCard({ recipe, isFavorite, onFavorite, isLoggedIn }) {
   const diff = diffBadge[(recipe.difficulty || '').toLowerCase()] || diffBadge.orta;
+  const cat = getCatAccent(recipe.category || '');
   return (
     <div className="src-card">
+      {/* Kategori renk şeridi */}
+      <div style={{ height: 4, background: `linear-gradient(90deg, ${cat.from}, ${cat.to})`, flexShrink: 0 }} />
       {isLoggedIn && (
         <button className="src-card__fav" onClick={onFavorite} aria-label={isFavorite ? 'Favoriden çıkar' : 'Favoriye ekle'}>
           {isFavorite ? '❤️' : '🤍'}

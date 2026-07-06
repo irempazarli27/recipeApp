@@ -86,19 +86,35 @@ export default function HomePage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
       {/* Hero / Selamlama */}
-      <div style={{ background: '#f0eafe', borderRadius: 16, padding: '28px 28px 26px', position: 'relative', overflow: 'hidden', border: '1px solid #e9d5ff' }}>
-        <p style={{ color: '#7c3aed', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', marginBottom: 12 }}>
+      <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 55%, #9333ea 100%)', borderRadius: 20, padding: '32px 28px 28px', position: 'relative', overflow: 'hidden', boxShadow: '0 10px 36px rgba(124,58,237,0.28)' }}>
+        {/* Dekoratif çemberler */}
+        <div style={{ position: 'absolute', right: -20, top: -20, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', right: 60, bottom: -45, width: 100, height: 100, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
+        <div style={{ position: 'absolute', left: -15, bottom: -15, width: 70, height: 70, borderRadius: '50%', background: 'rgba(255,255,255,0.04)', pointerEvents: 'none' }} />
+
+        <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.68rem', fontWeight: 700, letterSpacing: '0.14em', textTransform: 'uppercase', marginBottom: 12 }}>
           {new Date().toLocaleDateString('tr-TR', { weekday: 'long', day: 'numeric', month: 'long' })}
         </p>
-        <h2 style={{ margin: '0 0 8px', fontSize: '1.55rem', fontWeight: 900, lineHeight: 1.15, color: '#2e1065' }}>
-          {userName ? `Merhaba, ${userName}` : 'Bugün ne pişirsek?'}
+        <h2 style={{ margin: '0 0 10px', fontSize: '1.65rem', fontWeight: 900, lineHeight: 1.15, color: '#ffffff', letterSpacing: '-0.5px' }}>
+          {userName ? `Merhaba, ${userName} 👋` : 'Bugün ne pişirsek?'}
         </h2>
-        <p style={{ margin: '0 0 20px', color: '#6b21a8', opacity: 0.75, fontSize: '0.875rem', lineHeight: 1.6 }}>
-          {userName ? 'Bugün ne pişirsek? Binlerce tarif burada.' : 'Binlerce tarif, her damak zevkine göre.'}
+        <p style={{ margin: '0 0 20px', color: 'rgba(255,255,255,0.72)', fontSize: '0.88rem', lineHeight: 1.65 }}>
+          Binlerce tarif, her damak zevkine göre.
         </p>
+
+        {/* İstatistik çipleri */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 22, flexWrap: 'wrap' }}>
+          {[{ v: '115+', l: 'Tarif' }, { v: '5', l: 'Kategori' }, { v: '✨', l: 'AI Destekli' }].map(s => (
+            <div key={s.l} style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'rgba(255,255,255,0.14)', backdropFilter: 'blur(4px)', borderRadius: 8, padding: '5px 11px', border: '1px solid rgba(255,255,255,0.12)' }}>
+              <span style={{ fontWeight: 800, color: '#fff', fontSize: '0.85rem' }}>{s.v}</span>
+              <span style={{ color: 'rgba(255,255,255,0.65)', fontSize: '0.72rem' }}>{s.l}</span>
+            </div>
+          ))}
+        </div>
+
         <button
           className="btn"
-          style={{ background: '#7c3aed', color: '#fff', fontWeight: 700, fontSize: '0.88rem', padding: '9px 22px', border: 'none', borderRadius: 8 }}
+          style={{ background: '#fff', color: '#7c3aed', fontWeight: 700, fontSize: '0.88rem', padding: '9px 22px', border: 'none', borderRadius: 10, boxShadow: '0 2px 12px rgba(0,0,0,0.18)', letterSpacing: '-0.1px' }}
           onClick={() => navigate('/search')}
         >
           Tarif Ara →
@@ -107,17 +123,25 @@ export default function HomePage() {
 
       {/* Kategoriler */}
       <div>
-        <h3 className="section-title" style={{ marginBottom: 12 }}>Kategoriler</h3>
+        <h3 className="section-title" style={{ marginBottom: 14 }}>Kategoriler</h3>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {CATEGORIES.map(cat => (
             <button
               key={cat.value}
               onClick={() => navigate(`/search?category=${cat.value}`)}
-              style={{ display: 'flex', alignItems: 'center', gap: 6, background: cat.bg, border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontSize: '0.84rem', fontWeight: 600, color: cat.color, transition: 'opacity 0.15s' }}
-              onMouseEnter={e => e.currentTarget.style.opacity = '0.8'}
-              onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                background: cat.bg, border: '1.5px solid transparent',
+                borderRadius: 12, padding: '9px 16px', cursor: 'pointer',
+                fontSize: '0.84rem', fontWeight: 600, color: cat.color,
+                transition: 'transform 0.15s, box-shadow 0.15s',
+                boxShadow: '0 1px 4px rgba(0,0,0,0.06)',
+              }}
+              onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.12)'; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = ''; e.currentTarget.style.boxShadow = '0 1px 4px rgba(0,0,0,0.06)'; }}
             >
-              <span>{cat.emoji}</span> {cat.label}
+              <span style={{ fontSize: '1.1rem' }}>{cat.emoji}</span>
+              <span>{cat.label}</span>
             </button>
           ))}
         </div>
@@ -187,9 +211,10 @@ export default function HomePage() {
         </div>
 
         {loading && (
-          <div style={{ ...ds.cardLg, padding: ds.space[8], textAlign: 'center', marginTop: ds.space[2] }}>
-            <div style={{ fontSize: '2rem', marginBottom: 8 }}>✨</div>
-              <div style={{ color: ds.colors.accent, fontWeight: 600 }}>Tarifler hazırlanıyor...</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginTop: 8 }}>
+            {[1,2,3].map(i => (
+              <div key={i} className="skeleton" style={{ height: 80, borderRadius: 12 }} />
+            ))}
           </div>
         )}
 
