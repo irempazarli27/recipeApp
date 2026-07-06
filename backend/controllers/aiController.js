@@ -2,10 +2,18 @@ import { suggestRecipesWithAI, generateRecipeDetail, getDailyRecipes, transformR
 import { requireAuth } from './authController.js';
 import pool from '../config/db.js';
 
+// DB title cache: 5 dk boyunca aynı sonucu döner, her istekte DB'ye gitme.
+let titlesCache = { data: null, expiresAt: 0 };
+
 async function getExistingTitles() {
+  if (titlesCache.data && Date.now() < titlesCache.expiresAt) {
+    return titlesCache.data;
+  }
   try {
     const result = await pool.query('SELECT title FROM recipes');
-    return result.rows.map(r => r.title);
+    const titles = result.rows.map(r => r.title);
+    titlesCache = { data: titles, expiresAt: Date.now() + 5 * 60 * 1000 };
+    return titles;
   } catch (_) {
     return [];
   }
@@ -53,9 +61,8 @@ export async function aiWeeklyPlan(req, res) {
     const categories = catResult.rows.map(r => r.name);
     // AI'dan 7 günlük öneri al
     const suggestions = await suggestWeeklyPlan(categories);
-    // Her gün için uygun kategori+zorlukta DB'den rastgele tarif seç
-    const days = [];
-    for (const s of suggestions) {
+    // Tüm günler için DB sorgularını paralel çalıştır
+    const days = await Promise.all(suggestions.map(async (s) => {
       const { rows } = await pool.query(
         `SELECT r.id, r.title, r.description, r.difficulty, c.name AS category
          FROM recipes r
@@ -66,7 +73,6 @@ export async function aiWeeklyPlan(req, res) {
          LIMIT 1`,
         [s.category, s.difficulty || null]
       );
-      // Eğer zorlukla eşleşme yoksa, sadece kategoriye göre dene
       let recipe = rows[0];
       if (!recipe) {
         const fallback = await pool.query(
@@ -77,8 +83,8 @@ export async function aiWeeklyPlan(req, res) {
         );
         recipe = fallback.rows[0];
       }
-      days.push({ day: s.day, reason: s.reason, recipe: recipe || null });
-    }
+      return { day: s.day, reason: s.reason, recipe: recipe || null };
+    }));
     res.json({ days });
   } catch (err) {
     console.error('[AI weekly]', err.message);
