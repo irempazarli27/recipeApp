@@ -102,6 +102,13 @@ async function runMigrations() {
       week_start DATE NOT NULL DEFAULT date_trunc('week', CURRENT_DATE)::date,
       PRIMARY KEY(user_id, day_of_week, week_start)
     );
+
+    CREATE TABLE IF NOT EXISTS recipe_ratings (
+      user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      recipe_id INTEGER NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+      rating INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+      PRIMARY KEY(user_id, recipe_id)
+    );
   `);
 
   // Varsayılan kategorileri ekle (yoksa)
