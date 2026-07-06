@@ -125,7 +125,7 @@ export async function listRecipes(req, res) {
 		let where = '';
 		if (title) {
 			params.push(`%${title}%`);
-			where = `WHERE unaccent(lower(r.title)) ILIKE unaccent(lower($1))`;
+			where = `WHERE lower(r.title) ILIKE lower($1)`;
 		}
 		params.push(limit);
 		const result = await pool.query(
