@@ -238,13 +238,11 @@ export default function AccountPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  // GSI yükle + butonları render et
+  // GSI yükle + initialize — SADECE bir kez (tab bağımlılığı yok)
   useEffect(() => {
     if (user || !googleClientId) return;
-    let canceled = false;
-
-    function renderButtons() {
-      if (canceled) return;
+    loadGSI(googleClientId, handleGoogleCredential);
+    onGSIReady(() => {
       if (loginGoogleRef.current) {
         loginGoogleRef.current.innerHTML = '';
         window.google.accounts.id.renderButton(loginGoogleRef.current, {
@@ -259,13 +257,27 @@ export default function AccountPage() {
           text: 'signup_with', locale: 'tr'
         });
       }
+    });
+  }, [user, googleClientId, handleGoogleCredential]); // tab YOK — initialize tekrar çağrılmaz
+
+  // Tab değişince sadece butonları yeniden render et (initialize ÇAĞRILMAZ)
+  useEffect(() => {
+    if (user || !window._gsiInitDone) return;
+    if (loginGoogleRef.current) {
+      loginGoogleRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(loginGoogleRef.current, {
+        theme: 'outline', size: 'large', shape: 'pill', width: 280,
+        text: 'signin_with', locale: 'tr'
+      });
     }
-
-    loadGSI(googleClientId, handleGoogleCredential);
-    onGSIReady(renderButtons);
-
-    return () => { canceled = true; };
-  }, [user, googleClientId, handleGoogleCredential, tab]);
+    if (registerGoogleRef.current) {
+      registerGoogleRef.current.innerHTML = '';
+      window.google.accounts.id.renderButton(registerGoogleRef.current, {
+        theme: 'outline', size: 'large', shape: 'pill', width: 280,
+        text: 'signup_with', locale: 'tr'
+      });
+    }
+  }, [user, tab]);
 
   function handleLogin(e) {
     e.preventDefault();
