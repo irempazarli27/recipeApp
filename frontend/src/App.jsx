@@ -41,21 +41,15 @@ function SidebarContent({ open, onToggle, onNavClick }) {
 
   return (
     <>
-      {/* Logo + Toggle */}
-      <div className="sidebar-logo" style={!open ? { justifyContent: 'center', padding: '14px 0 14px' } : {}}>
-        {open && <div className="sidebar-logo-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>🍽</div>}
+      {/* Logo */}
+      <div className="sidebar-logo">
+        <div className="sidebar-logo-icon" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>🍽</div>
         {open && (
           <div className="sidebar-logo-text" onClick={() => navigate('/')} style={{ cursor: 'pointer' }}>
             <span className="sidebar-logo-name">Tarif<span>App</span></span>
             <small>Tarif Asistanı</small>
           </div>
         )}
-        <button onClick={onToggle} className="sidebar-toggle-btn" title="Gizle / Göster">
-          <ChevronsRight
-            size={16}
-            style={{ transition: 'transform 0.28s', transform: open ? 'rotate(180deg)' : 'none' }}
-          />
-        </button>
       </div>
 
       {/* Nav items */}
@@ -75,13 +69,19 @@ function SidebarContent({ open, onToggle, onNavClick }) {
         ))}
       </div>
 
-      {/* Logout */}
+      {/* Logout + Toggle */}
       {isLoggedIn && (
         <button onClick={handleLogout} className="sidebar-logout-btn" title={!open ? 'Çıkış Yap' : undefined}>
           <span className="sidebar-icon"><LogOut size={16} /></span>
           {open && <span className="sidebar-label">Çıkış Yap</span>}
         </button>
       )}
+      <button onClick={onToggle} className="sidebar-toggle-btn" title="Gizle / Göster" style={{ margin: '8px auto', display: 'flex' }}>
+        <ChevronsRight
+          size={16}
+          style={{ transition: 'transform 0.28s', transform: open ? 'rotate(180deg)' : 'none' }}
+        />
+      </button>
     </>
   );
 }
