@@ -56,36 +56,75 @@ export async function aiTransformRecipe(req, res) {
 
 export async function aiWeeklyPlan(req, res) {
   try {
-    // Mevcut kategorileri DB'den çek
-    const catResult = await pool.query('SELECT DISTINCT name FROM categories ORDER BY name');
-    const categories = catResult.rows.map(r => r.name);
-    // AI'dan 7 günlük öneri al
-    const suggestions = await suggestWeeklyPlan(categories);
-    // Tüm günler için DB sorgularını paralel çalıştır
-    const days = await Promise.all(suggestions.map(async (s) => {
-      const { rows } = await pool.query(
-        `SELECT r.id, r.title, r.description, r.difficulty, c.name AS category
-         FROM recipes r
-         JOIN categories c ON c.id = r.category_id
-         WHERE c.name ILIKE $1
-           AND ($2::text IS NULL OR r.difficulty = $2)
-         ORDER BY RANDOM()
-         LIMIT 1`,
-        [s.category, s.difficulty || null]
+    // Tüm tarif adlarını + popülerlik bilgisini çek
+    const { rows: allRecipes } = await pool.query(
+      `SELECT r.id, r.title, r.description, r.difficulty, c.name AS category,
+              COUNT(DISTINCT f.user_id)::int AS favorite_count,
+              COALESCE(AVG(rr.rating), 0)::numeric(3,1) AS avg_rating
+       FROM recipes r
+       JOIN categories c ON c.id = r.category_id
+       LEFT JOIN user_favorites f ON f.recipe_id = r.id
+       LEFT JOIN recipe_ratings rr ON rr.recipe_id = r.id
+       GROUP BY r.id, r.title, r.description, r.difficulty, c.name
+       ORDER BY favorite_count DESC, avg_rating DESC`
+    );
+
+    // Kullanıcının son 4 haftada baktığı tarifleri çek (D: görülmemiş öncelikli)
+    const { rows: histRows } = await pool.query(
+      `SELECT DISTINCT recipe_id FROM recipe_history
+       WHERE user_id = $1 AND viewed_at >= NOW() - INTERVAL '28 days'`,
+      [req.userId]
+    ).catch(() => ({ rows: [] }));
+    const recentIds = new Set(histRows.map(r => r.recipe_id));
+
+    const titles = allRecipes.map(r => r.title);
+
+    // E: AI tema + tarif adı önerisi
+    const suggestion = await suggestWeeklyPlan(titles);
+    const theme = suggestion.theme || '';
+    const aiDays = Array.isArray(suggestion.days) ? suggestion.days : [];
+
+    // Her AI önerisi için DB'de isim eşleştir — önce görülmemiş & popüler
+    const usedIds = new Set();
+    const days = aiDays.map(s => {
+      const name = (s.recipeName || '').toLowerCase().trim();
+
+      // 1. Tam eşleşme (görülmemiş önce)
+      let match = allRecipes.find(r =>
+        !usedIds.has(r.id) && !recentIds.has(r.id) &&
+        r.title.toLowerCase().trim() === name
       );
-      let recipe = rows[0];
-      if (!recipe) {
-        const fallback = await pool.query(
-          `SELECT r.id, r.title, r.description, r.difficulty, c.name AS category
-           FROM recipes r JOIN categories c ON c.id = r.category_id
-           WHERE c.name ILIKE $1 ORDER BY RANDOM() LIMIT 1`,
-          [s.category]
-        );
-        recipe = fallback.rows[0];
-      }
-      return { day: s.day, reason: s.reason, recipe: recipe || null };
-    }));
-    res.json({ days });
+      // 2. Tam eşleşme (görülmüş de olsa)
+      if (!match) match = allRecipes.find(r =>
+        !usedIds.has(r.id) && r.title.toLowerCase().trim() === name
+      );
+      // 3. Kısmi eşleşme (görülmemiş önce, popülerlik sıralı)
+      if (!match) match = allRecipes.find(r =>
+        !usedIds.has(r.id) && !recentIds.has(r.id) &&
+        (r.title.toLowerCase().includes(name) || name.includes(r.title.toLowerCase().trim()))
+      );
+      // 4. Kısmi eşleşme (görülmüş de)
+      if (!match) match = allRecipes.find(r =>
+        !usedIds.has(r.id) &&
+        (r.title.toLowerCase().includes(name) || name.includes(r.title.toLowerCase().trim()))
+      );
+      // 5. Fallback: en popüler henüz kullanılmamış tarif
+      if (!match) match = allRecipes.find(r => !usedIds.has(r.id) && !recentIds.has(r.id));
+      if (!match) match = allRecipes.find(r => !usedIds.has(r.id));
+
+      if (match) usedIds.add(match.id);
+
+      return {
+        day: s.day,
+        reason: s.reason || '',
+        recipe: match ? {
+          id: match.id, title: match.title, description: match.description,
+          difficulty: match.difficulty, category: match.category
+        } : null
+      };
+    });
+
+    res.json({ theme, days });
   } catch (err) {
     console.error('[AI weekly]', err.message);
     let userMsg = 'AI haftalık öneri alınamadı.';

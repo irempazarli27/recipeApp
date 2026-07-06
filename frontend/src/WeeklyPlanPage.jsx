@@ -203,6 +203,7 @@ export default function WeeklyPlanPage() {
   const [saving, setSaving]       = useState(false);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiError, setAiError]     = useState(null);
+  const [aiTheme, setAiTheme]     = useState(null); // haftalık tema
 
   useEffect(() => {
     if (!isLoggedIn) { setLoading(false); return; }
@@ -234,6 +235,7 @@ export default function WeeklyPlanPage() {
     setAiError(null);
     try {
       const d = await aiWeeklyPlan();
+      if (d.theme) setAiTheme(d.theme);
       const newPlan = [...plan];
       for (const item of (d.days || [])) {
         if (item.recipe && typeof item.day === 'number' && !newPlan[item.day]?.recipe) {
@@ -298,6 +300,22 @@ export default function WeeklyPlanPage() {
       </div>
 
       {aiError && <div className="error" style={{ marginBottom: 16 }}>{aiError}</div>}
+
+      {/* ── AI Tema Banner ───────────────────────── */}
+      {aiTheme && (
+        <div style={{
+          background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+          borderRadius: 12, padding: '12px 18px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 10,
+          boxShadow: '0 4px 16px rgba(124,58,237,0.2)',
+        }}>
+          <span style={{ fontSize: '1.3rem' }}>✨</span>
+          <div>
+            <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Bu haftanın teması</div>
+            <div style={{ color: '#fff', fontWeight: 800, fontSize: '1rem' }}>{aiTheme}</div>
+          </div>
+        </div>
+      )}
 
       {/* ── Weekday header strip ─────────────────── */}
       <div className="wp-day-strip">

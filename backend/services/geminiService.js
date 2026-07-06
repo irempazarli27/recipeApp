@@ -111,25 +111,38 @@ Yanıtı SADECE geçerli JSON formatında ver, başka hiçbir metin veya açıkl
 }
 
 /**
- * Haftalık menü için 7 kategori önerisi üretir.
+ * Haftalık menü: AI önce bir tema seçer, sonra 7 tarif adını DB'den mevcut
+ * isimler listesinden seçerek önerir.
+ * Döndürür: { theme: string, days: [{day, recipeName, reason}] }
  */
-export async function suggestWeeklyPlan(categories) {
+export async function suggestWeeklyPlan(recipeTitles) {
   if (!ai) throw new Error('Gemini API anahtarı yapılandırılmamış.');
-  const catList = categories.join(', ');
-  const prompt = `Türk mutfağında haftalık (7 günlük) dengeli bir yemek planı öner. Mevcut kategoriler: ${catList}.
-Her gün için farklı bir kategori seç, çeşitli ve dengeli olsun.
-Yanıtı SADECE geçerli JSON formatında ver, başka hiçbir metin ekleme. Türkçe yaz:
-[
-  {"day": 0, "category": "kategori adı", "difficulty": "kolay", "reason": "kısa neden (tek cümle)"},
-  {"day": 1, "category": "kategori adı", "difficulty": "orta", "reason": "kısa neden"},
-  {"day": 2, "category": "kategori adı", "difficulty": "kolay", "reason": "kısa neden"},
-  {"day": 3, "category": "kategori adı", "difficulty": "zor", "reason": "kısa neden"},
-  {"day": 4, "category": "kategori adı", "difficulty": "kolay", "reason": "kısa neden"},
-  {"day": 5, "category": "kategori adı", "difficulty": "orta", "reason": "kısa neden"},
-  {"day": 6, "category": "kategori adı", "difficulty": "kolay", "reason": "kısa neden"}
-]`;
+
+  // DB'deki gerçek tarif adlarını AI'ya ver (max 80 başlık)
+  const sample = recipeTitles.slice(0, 80).join(', ');
+
+  const prompt = `Aşağıdaki tarif listesinden 7 günlük dengeli bir Türk mutfağı haftalık menüsü oluştur.
+Önce kısa ve ilgi çekici bir haftalık tema adı seç (örneğin "Ege Lezzetleri", "Pratik Hafta", "Klasik Anadolu", "Hafif & Sağlıklı").
+Sonra her güne listeden farklı bir tarif seç — aynı tarifi iki güne koyma.
+
+Mevcut tarifler: ${sample}
+
+Yanıtı SADECE geçerli JSON formatında ver, Türkçe yaz:
+{
+  "theme": "Tema Adı",
+  "days": [
+    {"day": 0, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 1, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 2, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 3, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 4, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 5, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"},
+    {"day": 6, "recipeName": "Listeden tam tarif adı", "reason": "tek cümle neden"}
+  ]
+}`;
+
   const text = await callGemini(prompt);
-  const match = text.match(/\[[\s\S]*\]/);
+  const match = text.match(/\{[\s\S]*\}/);
   if (!match) throw new Error('AI yanıtı JSON formatında değil');
   return JSON.parse(match[0]);
 }
